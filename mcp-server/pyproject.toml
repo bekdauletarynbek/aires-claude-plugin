@@ -23,8 +23,14 @@ dependencies = [
   "mcp>=1.2,<2.0",
 ]
 
+# Нужен только серверу, который слушает HTTP (claude.ai / Desktop-коннектор).
+# Локальному stdio-режиму — нет, поэтому не в основных зависимостях.
+[project.optional-dependencies]
+http = ["uvicorn>=0.30"]
+
 [project.scripts]
 aires-mcp = "aires_mcp.server:main"
+aires-mcp-http = "aires_mcp.http_server:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["aires_mcp"]
