@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# Its own distribution rather than an extra on aires-back, for two reasons
+# that both bite the person installing it:
+#
+#   * aires-back pins requires-python to >=3.11,<3.12 (the OCR/layout stack
+#     forces it). As an extra, this server refused to install on any newer
+#     Python — which is most machines running Claude Code.
+#   * an extra would drag celery, qdrant-client, pymupdf, boto3 and Pillow
+#     onto a laptop, to run what is an httpx client with six tools.
+[project]
+name = "aires-mcp"
+version = "0.1.0"
+description = "MCP-сервер над корпусом arXiv AIres — поиск, анализ и презентации в Claude Code"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Proprietary" }
+
+dependencies = [
+  "httpx>=0.27",
+  "mcp>=1.2,<2.0",
+]
+
+[project.scripts]
+aires-mcp = "aires_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["aires_mcp"]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.24",
+  "respx>=0.21",
+]
+
+# Its own pytest config, and its own tests directory: the backend's conftest
+# imports fakeredis and the aires_back package, neither of which belongs in an
+# environment whose whole point is to stay small.
+[tool.pytest.ini_options]
+minversion = "8.0"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers", "--tb=short"]

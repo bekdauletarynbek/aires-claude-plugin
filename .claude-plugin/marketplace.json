@@ -1,0 +1,17 @@
+{
+  "name": "aires",
+  "owner": {
+    "name": "AIRES",
+    "url": "https://mcp.ai-marketing.cloud"
+  },
+  "description": "Корпус проанализированных arXiv-статей под задачи продуктовых команд",
+  "plugins": [
+    {
+      "name": "aires",
+      "source": "./",
+      "description": "Доступ к корпусу AIRES: поиск по полным текстам, разбор по компаниям, идеи и PRD",
+      "version": "1.0.0",
+      "author": { "name": "AIRES" }
+    }
+  ]
+}

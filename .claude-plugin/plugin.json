@@ -1,0 +1,48 @@
+{
+  "name": "aires",
+  "displayName": "AIRES — корпус arXiv для холдинга",
+  "version": "1.0.0",
+  "description": "Спрашивайте про исследования обычными словами: поиск по полным текстам статей, разбор по компаниям холдинга, идеи с возможностями и рисками, PRD по статье.",
+  "author": {
+    "name": "AI Marketing",
+    "url": "https://arxiv.ai-marketing.cloud"
+  },
+  "homepage": "https://mcp.ai-marketing.cloud",
+  "repository": "https://github.com/bekdauletarynbek/aires-claude-plugin",
+  "keywords": [
+    "research",
+    "arxiv",
+    "freedom-holding",
+    "mcp"
+  ],
+  "mcpServers": {
+    "aires": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/bekdauletarynbek/aires-claude-plugin#subdirectory=mcp-server",
+        "aires-mcp"
+      ],
+      "env": {
+        "AIRES_API_URL": "${user_config.api_url}",
+        "AIRES_BASIC_AUTH": "${user_config.basic_auth}"
+      }
+    }
+  },
+  "userConfig": {
+    "basic_auth": {
+      "type": "string",
+      "title": "Доступ к AIRES (логин:пароль)",
+      "description": "Те же креды, под которыми открывается mcp.ai-marketing.cloud. Формат строго логин:пароль — без «Basic» и без base64.",
+      "sensitive": true,
+      "required": true
+    },
+    "api_url": {
+      "type": "string",
+      "title": "Адрес API",
+      "description": "Менять только для локальной разработки.",
+      "default": "https://arxiv.ai-marketing.cloud/api"
+    }
+  }
+}
