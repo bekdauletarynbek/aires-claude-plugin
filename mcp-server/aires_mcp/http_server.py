@@ -21,6 +21,11 @@
                      открыт всему интернету.
   AIRES_API_URL      адрес API корпуса (как в stdio-режиме).
   AIRES_BASIC_AUTH   доступ сервера к API — свой, общий на все токены.
+  AIRES_MCP_HOSTS    домены, под которыми сервер доступен снаружи, через
+                     запятую. Обязательна за обратным прокси: SDK защищается
+                     от подмены Host (DNS rebinding) и по умолчанию признаёт
+                     только localhost, отвечая «Invalid Host header» на всё
+                     остальное.
 """
 
 from __future__ import annotations
@@ -154,9 +159,33 @@ class TokenGuard:
         await send({"type": "http.response.body", "body": body})
 
 
+def _allowed_hosts() -> list[str]:
+    """Домены, под которыми нас зовут снаружи.
+
+    Пустой список означал бы «пускать любой Host» только если отключить
+    саму защиту — этого не делаем: подмена Host у публичного сервиса
+    открывает дорогу к запросам от имени браузера жертвы.
+    """
+    raw = os.environ.get("AIRES_MCP_HOSTS", "")
+    hosts = [h.strip() for h in raw.split(",") if h.strip()]
+    # localhost нужен проверке живости и отладке через ssh-туннель.
+    hosts += ["127.0.0.1", "localhost", "127.0.0.1:8765", "localhost:8765"]
+    return hosts
+
+
 def build_http_app(tokens: dict[str, str] | None = None) -> Any:
     """MCP поверх streamable-HTTP, закрытый персональными токенами."""
+    from mcp.server.transport_security import TransportSecuritySettings
+
+    hosts = _allowed_hosts()
     mcp = build_server()
+    mcp.settings.transport_security = TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=hosts,
+        # Origin присылает браузер; облако Anthropic ходит без него, но
+        # список нужен для случая, когда коннектор дергают из веб-клиента.
+        allowed_origins=[f"https://{h}" for h in hosts if "." in h],
+    )
     return TokenGuard(mcp.streamable_http_app(), tokens or load_tokens())
 
 

@@ -129,3 +129,15 @@ async def test_healthz_is_open_but_says_nothing() -> None:
     assert sent[0]["status"] == 200
     assert sent[1]["body"] == b"ok"
     assert not spy.calls
+
+
+def test_allowed_hosts_include_public_domain_and_localhost(monkeypatch) -> None:
+    """За обратным прокси Host приходит внешний — без него SDK отвечает
+    «Invalid Host header» и коннектор не подключается вовсе."""
+    from aires_mcp.http_server import _allowed_hosts
+
+    monkeypatch.setenv("AIRES_MCP_HOSTS", "mcp-api.example.com, other.example.com")
+    hosts = _allowed_hosts()
+    assert "mcp-api.example.com" in hosts
+    assert "other.example.com" in hosts
+    assert "127.0.0.1" in hosts, "проба живости ходит на loopback"
