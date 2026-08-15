@@ -1,4 +1,4 @@
-"""MCP server exposing the AIres arXiv corpus to Claude Code."""
+"""MCP server exposing the AIres research corpus to Claude Code."""
 
 __all__ = ["__version__"]
 

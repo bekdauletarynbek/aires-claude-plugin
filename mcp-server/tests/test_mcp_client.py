@@ -19,7 +19,7 @@ import respx
 
 from aires_mcp.client import AiresClient, AiresError, truncate
 
-BASE = "https://arxiv.example.com"
+BASE = "https://aires.example.com"
 
 
 def _client(**kwargs: object) -> AiresClient:

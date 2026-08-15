@@ -1,4 +1,4 @@
-"""MCP server over the AIres arXiv corpus.
+"""MCP server over the AIres research corpus.
 
 Installed into Claude Code, this turns the corpus into something a person can
 interrogate in the middle of their own work: *what has our library got on
@@ -48,7 +48,7 @@ def _client_from_env() -> AiresClient:
         # thing entirely.
         raise AiresError(
             f"{ENV_URL} не задан. Пропишите адрес API в конфиге MCP-сервера, "
-            "например https://arxiv.ai-marketing.cloud/api"
+            "например https://aires.ai-marketing.cloud/api"
         )
     return AiresClient(
         base_url=base, basic_auth=os.environ.get(ENV_AUTH) or None
@@ -82,7 +82,7 @@ def build_server() -> Any:
     mcp = FastMCP(
         "aires",
         instructions=(
-            "Корпус научных статей arXiv, разобранных под задачи Freedom "
+            "Корпус научных статей, разобранных под задачи Freedom "
             "Holding: по каждой статье есть оценка релевантности компаниям, "
             "конкретные возможности и риски.\n\n"
             "Когда собеседник спрашивает открыто — «что можно сделать?», "
@@ -102,7 +102,7 @@ def build_server() -> Any:
 
     @mcp.tool()
     async def search_articles(query: str, limit: int = 10) -> str:
-        """Найти статьи в корпусе arXiv по смыслу запроса.
+        """Найти статьи в корпусе по смыслу запроса.
 
         Семантический поиск по полным текстам — не по заголовкам. Возвращает
         статьи с фрагментом, который совпал, и id для остальных инструментов.

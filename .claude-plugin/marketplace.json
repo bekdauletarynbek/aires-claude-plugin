@@ -4,7 +4,7 @@
     "name": "AIRES",
     "url": "https://mcp.ai-marketing.cloud"
   },
-  "description": "Корпус проанализированных arXiv-статей под задачи продуктовых команд",
+  "description": "Корпус проанализированных научных статей под задачи продуктовых команд",
   "plugins": [
     {
       "name": "aires",

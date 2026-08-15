@@ -1,17 +1,17 @@
 {
   "name": "aires",
-  "displayName": "AIRES — корпус arXiv для холдинга",
-  "version": "1.1.0",
+  "displayName": "AIRES — корпус исследований для холдинга",
+  "version": "1.2.0",
   "description": "Спрашивайте про исследования обычными словами: поиск по полным текстам статей, разбор по компаниям холдинга, идеи с возможностями и рисками, PRD по статье.",
   "author": {
     "name": "AI Marketing",
-    "url": "https://arxiv.ai-marketing.cloud"
+    "url": "https://aires.ai-marketing.cloud"
   },
   "homepage": "https://mcp.ai-marketing.cloud",
   "repository": "https://github.com/bekdauletarynbek/aires-claude-plugin",
   "keywords": [
     "research",
-    "arxiv",
+    "research",
     "freedom-holding",
     "mcp"
   ],
@@ -42,7 +42,7 @@
       "type": "string",
       "title": "Адрес API",
       "description": "Менять только для локальной разработки.",
-      "default": "https://arxiv.ai-marketing.cloud/api"
+      "default": "https://aires.ai-marketing.cloud/api"
     }
   }
 }
