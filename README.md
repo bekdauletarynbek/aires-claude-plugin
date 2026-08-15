@@ -15,7 +15,7 @@
 ```
 
 При установке Claude спросит доступ к API — `логин:пароль`. **Плагин открытый,
-а данные корпуса — нет:** доступы выдаёт администратор инстанса. Пароль
+а данные корпуса — нет:** доступы выдаются лично — телеграм [@zzzSergeyzzz](https://t.me/zzzSergeyzzz). Пароль
 хранится в конфиге Claude как секрет.
 
 Из зависимостей нужен только [`uv`](https://astral.sh/uv) — MCP-сервер
@@ -45,6 +45,25 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 **Инструменты MCP:** `corpus_coverage`, `company_brief`, `search_articles`,
 `get_article`, `get_articles`, `suggest_ideas`, `list_companies`,
 `company_articles`, `prd_brief`, `save_prd`, `get_deck_link`.
+
+## Подключение из claude.ai и Claude Desktop
+
+Плагин (агент и команды) работает только в Claude Code. Сам корпус подключается
+и в других клиентах — как коннектор по личной ссылке:
+
+```
+https://mcp-api.ai-marketing.cloud/t/ВАШ-ТОКЕН/mcp
+```
+
+claude.ai: Настройки → Connectors → Add custom connector → вставить ссылку.
+Team/Enterprise: владелец добавляет её в Organization settings → Connectors, дальше
+участники жмут «Connect» у себя.
+
+Если у вас включена бета «Request headers», можно указать адрес без токена
+(`https://mcp-api.ai-marketing.cloud/mcp`) и заголовок `Authorization` со значением
+`Bearer ВАШ-ТОКЕН`.
+
+Ссылку с токеном берите у [@zzzSergeyzzz](https://t.me/zzzSergeyzzz).
 
 ## Настройки
 
