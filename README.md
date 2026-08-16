@@ -9,21 +9,19 @@
 
 ## Установка
 
-```
-/plugin marketplace add bekdauletarynbek/aires-claude-plugin
-/plugin install aires@aires
-```
+    /plugin marketplace add bekdauletarynbek/aires-claude-plugin
+    /plugin install aires@aires
 
-При установке Claude спросит доступ к API — `логин:пароль`. **Плагин открытый,
-а данные корпуса — нет:** доступы выдаются лично — телеграм [@zzzSergeyzzz](https://t.me/zzzSergeyzzz). Пароль
-хранится в конфиге Claude как секрет.
+Claude спросит **одно** — вашу личную ссылку на корпус:
 
-Из зависимостей нужен только [`uv`](https://astral.sh/uv) — MCP-сервер
-подтянется из этого репозитория автоматически:
+    https://mcp-api.ai-marketing.cloud/t/ВАШ-ТОКЕН/mcp
 
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
+Её выдаёт [@zzzSergeyzzz](https://t.me/zzzSergeyzzz). Токен внутри ссылки
+личный: отзывается по одному, не задевая остальных.
+
+**Логин и пароль вводить не нужно.** Раньше плагин просил их, и это
+путало: пароль от страницы с мануалом и пароль от корпуса — разные, а в
+подсказке было написано, что одинаковые. Теперь секрет ровно один.
 
 ## Что появляется
 
