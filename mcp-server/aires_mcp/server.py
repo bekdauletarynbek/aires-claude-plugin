@@ -213,6 +213,17 @@ def build_server() -> Any:
         return await _call(lambda c: _prd_brief(c, article_id))
 
     @mcp.tool()
+    async def deck_brief(article_id: int) -> str:
+        """Материалы для презентации, которую вы соберёте САМИ.
+
+        Возвращает план слайдов (если он есть в корпусе) плюс выжимку и
+        ключевые цифры статьи. Дальше показываете колоду человеку как
+        артефакт — HTML-страницу со слайдами. Серверной сборки .pptx для
+        новых статей нет: документ и колода живут у пользователя.
+        """
+        return await _call(lambda c: _deck_brief(c, article_id))
+
+    @mcp.tool()
     async def get_deck_link(article_id: int) -> str:
         """Ссылка на .pptx — презентация собирается из готового плана."""
         return await _call(lambda c: _deck(c, article_id))
@@ -335,14 +346,54 @@ async def _prd_brief(client: AiresClient, article_id: int) -> str:
     return format_prd_brief(brief)
 
 
+async def _deck_brief(client: AiresClient, article_id: int) -> str:
+    article = await client.get_article(article_id)
+    artifacts = article.get("artifacts") or {}
+    plan = artifacts.get("presentation_text") or ""
+    summary = artifacts.get("summary") or artifacts.get("summary_eng") or ""
+    prd = artifacts.get("prd_text") or ""
+    title = article.get("title") or article.get("original_title") or f"Статья #{article_id}"
+
+    parts = [
+        f"# Материалы для презентации: {title}",
+        "",
+        "## Как подать результат",
+        "Соберите колоду САМИ и покажите её артефактом — одной HTML-страницей "
+        "со слайдами (клавиши влево-вправо, счётчик слайдов). Не описывайте "
+        "слайды текстом в чате: человек ждёт готовую колоду, которую можно "
+        "листать. В Claude Code опубликуйте её как артефакт-страницу.",
+        "",
+        "## Правила колоды",
+        "Один слайд — одна мысль. Титул, затем проблема, метод, результаты "
+        "с числами, применимость к продуктам холдинга, риски и ограничения, "
+        "источник с номером статьи. Числа берите только отсюда: выдумывать "
+        "их нельзя, а если чего-то нет — так и скажите на слайде.",
+        "",
+    ]
+    if plan:
+        parts += ["## Готовый план слайдов", plan, ""]
+    else:
+        parts += [
+            "## Плана слайдов в корпусе нет",
+            "Стройте колоду по выжимке ниже — это нормальный путь.",
+            "",
+        ]
+    if summary:
+        parts += ["## Выжимка статьи", summary, ""]
+    if prd:
+        parts += ["## PRD по статье", prd[:6000], ""]
+    return "\n".join(parts)
+
+
 async def _deck(client: AiresClient, article_id: int) -> str:
     article = await client.get_article(article_id)
     stages = article.get("stages") or {}
     if not stages.get("presentation_done"):
         return (
             f"Для статьи #{article_id} плана презентации ещё нет. "
-            f"Сначала PRD: `prd_brief({article_id})` → напишите документ → "
-            "загрузите его в кабинете корпуса; план презентации сервер соберёт сам."
+            f"Соберите её сами: `deck_brief({article_id})` вернёт материалы, "
+            "а колоду покажите артефактом. Серверная сборка .pptx осталась "
+            "только у статей со старым планом."
         )
     return (
         f"Презентация по статье #{article_id}: {client.deck_url(article_id)}\n"

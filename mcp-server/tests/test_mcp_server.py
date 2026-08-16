@@ -158,7 +158,7 @@ async def test_deck_link_refuses_when_no_plan_exists(fake) -> None:  # type: ign
 
     out = await server._deck(client, 5)  # type: ignore[arg-type]
 
-    assert "prd_brief(5)" in out
+    assert "deck_brief(5)" in out, "должно вести к сборке колоды самим клиентом"
     assert "export.pptx" not in out
 
 
@@ -192,6 +192,7 @@ def test_every_tool_is_registered_with_a_description() -> None:
         "get_articles",
         "company_brief",
         "prd_brief",
+        "deck_brief",
         "get_deck_link",
     }
     for tool in tools:
@@ -319,3 +320,39 @@ async def test_prd_brief_warns_about_existing_prd(fake) -> None:  # type: ignore
     assert "перезапишет" in out
 
 
+
+
+async def test_deck_brief_uses_the_stored_plan(fake) -> None:  # type: ignore[no-untyped-def]
+    """План из корпуса должен доехать до модели дословно."""
+    client = fake(get_article={
+        "id": 7, "title": "Про распознавание речи",
+        "artifacts": {"presentation_text": "Слайд 1: постановка задачи",
+                      "summary": "Метод снижает ошибку на 12%"},
+    })
+
+    out = await server._deck_brief(client, 7)  # type: ignore[arg-type]
+
+    assert "Слайд 1: постановка задачи" in out
+    assert "артефакт" in out.lower(), "модель должна знать, что показывать колоду артефактом"
+
+
+async def test_deck_brief_works_without_a_plan(fake) -> None:  # type: ignore[no-untyped-def]
+    """Отсутствие плана — обычный случай, а не отказ."""
+    client = fake(get_article={
+        "id": 8, "title": "Статья без плана",
+        "artifacts": {"summary": "Короткая выжимка"},
+    })
+
+    out = await server._deck_brief(client, 8)  # type: ignore[arg-type]
+
+    assert "Короткая выжимка" in out
+    assert "нет" in out.lower()
+
+
+async def test_deck_brief_forbids_inventing_numbers(fake) -> None:  # type: ignore[no-untyped-def]
+    """Цифры в колоде — только из корпуса: выдуманные хуже отсутствующих."""
+    client = fake(get_article={"id": 9, "artifacts": {"summary": "текст"}})
+
+    out = await server._deck_brief(client, 9)  # type: ignore[arg-type]
+
+    assert "выдумывать" in out.lower()
