@@ -1,7 +1,7 @@
 {
   "name": "aires",
   "displayName": "AIRES — корпус исследований для холдинга",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "Спрашивайте про исследования обычными словами: поиск по полным текстам статей, разбор по компаниям холдинга, идеи с возможностями и рисками, PRD по статье.",
   "author": {
     "name": "AI Marketing",
@@ -18,16 +18,7 @@
   "mcpServers": {
     "aires": {
       "type": "http",
-      "url": "${user_config.connector_url}"
-    }
-  },
-  "userConfig": {
-    "connector_url": {
-      "type": "string",
-      "title": "Личная ссылка на корпус",
-      "description": "Вида https://mcp-api.ai-marketing.cloud/t/ВАШ-ТОКЕН/mcp — получите в телеграме у @zzzSergeyzzz. Больше ничего вводить не нужно: логин с паролем от сайта здесь не используются.",
-      "sensitive": true,
-      "required": true
+      "url": "https://mcp-api.ai-marketing.cloud/mcp"
     }
   }
 }
