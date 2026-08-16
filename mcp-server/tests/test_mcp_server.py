@@ -192,7 +192,6 @@ def test_every_tool_is_registered_with_a_description() -> None:
         "get_articles",
         "company_brief",
         "prd_brief",
-        "save_prd",
         "get_deck_link",
     }
     for tool in tools:
@@ -210,7 +209,9 @@ def test_no_tool_spends_the_project_budget() -> None:
     tools = asyncio.run(server.build_server().list_tools())
     names = {t.name for t in tools}
     assert "generate_prd" not in names
-    assert {"prd_brief", "save_prd"} <= names
+    # save_prd убран намеренно: у инструментов не должно быть записи в корпус.
+    assert "save_prd" not in names
+    assert "prd_brief" in names
 
     brief = next(t for t in tools if t.name == "prd_brief")
     assert "$" not in (brief.description or ""), "платить не за что"
@@ -301,7 +302,7 @@ async def test_prd_brief_carries_prompts_verbatim(fake) -> None:  # type: ignore
     )
     out = await server._prd_brief(client, 7)  # type: ignore[arg-type]
     assert system in out, "системный промпт обязан войти дословно"
-    assert "save_prd(7" in out
+    assert "save_prd" not in out, "подсказка не должна звать удалённый инструмент"
     assert "перезапишет" not in out
 
 
@@ -318,15 +319,3 @@ async def test_prd_brief_warns_about_existing_prd(fake) -> None:  # type: ignore
     assert "перезапишет" in out
 
 
-async def test_save_prd_reports_presentation_in_background(fake) -> None:  # type: ignore[no-untyped-def]
-    client = _FakeClient(
-        submit_prd={
-            "accepted": True,
-            "article_id": 7,
-            "presentation_task_id": "tid-1",
-            "queued_at": "2026-08-13T00:00:00Z",
-        }
-    )
-    out = await server._save_prd(client, 7, "# PRD: Тест\n...")  # type: ignore[arg-type]
-    assert client.calls == [("submit_prd", (7, "# PRD: Тест\n..."))]
-    assert "get_deck_link(7)" in out

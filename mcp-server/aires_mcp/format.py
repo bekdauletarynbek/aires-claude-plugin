@@ -11,7 +11,7 @@ Two things are non-negotiable in every result:
   is a dead end;
 * **what is missing and how to get it**. "No PRD yet" is the normal state, not
   an error: the document is written by the caller's model via ``prd_brief`` →
-  ``save_prd``, so the result must name that path rather than let the model
+  the cabinet, so the result must name that path rather than let the model
   conclude the paper is unanalysed.
 """
 
@@ -257,12 +257,12 @@ def _missing_prd_note(article_id: Any, stages: dict[str, Any]) -> str:
     if stages.get("vibe_prd"):
         return (
             "PRD отмечен как готовый, но текста нет — вероятно, сбой выгрузки. "
-            f"Перезапишите: `prd_brief({article_id})` → `save_prd({article_id}, ...)`."
+            "Перезаписать документ можно из кабинета корпуса."
         )
     return (
         "PRD ещё не писали: документ создаёте ВЫ, а не сервер. "
-        f"`prd_brief({article_id})` вернёт промпт и материалы, готовый текст — "
-        f"в `save_prd({article_id}, ...)`; план презентации сервер соберёт сам."
+        f"`prd_brief({article_id})` вернёт промпт и материалы; готовый текст "
+        "загружают в корпус из кабинета — у инструментов доступа на запись нет."
     )
 
 
@@ -395,7 +395,7 @@ def format_prd_brief(brief: dict[str, Any]) -> str:
     parts = [
         f"# Бриф PRD для статьи #{article_id}",
         "Напишите PRD сами, строго следуя системному промпту ниже, затем "
-        f"сохраните весь документ: `save_prd({article_id}, prd_markdown=...)`.",
+        "отдайте документ человеку — загрузить его в корпус можно из кабинета.",
     ]
     if brief.get("already_has_prd"):
         parts.append(

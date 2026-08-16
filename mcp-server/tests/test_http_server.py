@@ -141,3 +141,57 @@ def test_allowed_hosts_include_public_domain_and_localhost(monkeypatch) -> None:
     assert "mcp-api.example.com" in hosts
     assert "other.example.com" in hosts
     assert "127.0.0.1" in hosts, "проба живости ходит на loopback"
+
+
+# ─── авторизация через гугловый вход ───────────────────────────────────
+
+
+@pytest.mark.anyio
+async def test_unauthorized_points_to_the_login_server() -> None:
+    """По этому заголовку клиент Claude и находит, где авторизоваться."""
+    spy = _Spy()
+    sent = await _call(TokenGuard(spy, TOKENS), "/mcp")
+
+    header = dict(sent[0]["headers"])[b"www-authenticate"].decode()
+    assert "resource_metadata=" in header
+    assert "/.well-known/oauth-protected-resource" in header
+
+
+@pytest.mark.anyio
+async def test_resource_metadata_is_public_and_names_the_auth_server() -> None:
+    """Документ обязан читаться без токена: его смотрят ДО авторизации."""
+    import json as js
+
+    spy = _Spy()
+    sent = await _call(TokenGuard(spy, TOKENS), "/.well-known/oauth-protected-resource")
+
+    assert sent[0]["status"] == 200
+    body = js.loads(sent[1]["body"])
+    assert body["authorization_servers"], "не указан сервер авторизации"
+    assert not spy.calls, "метаданные не должны доходить до инструментов"
+
+
+@pytest.mark.anyio
+async def test_oauth_token_is_checked_against_auth_server(monkeypatch) -> None:
+    """Токен гуглового входа принимается, только если сервер подтвердил его."""
+    from aires_mcp import http_server
+
+    seen: dict[str, str] = {}
+
+    def fake_introspect(token: str) -> bool:
+        seen["token"] = token
+        return token.endswith("good")
+
+    monkeypatch.setattr(http_server, "_introspect", fake_introspect)
+
+    spy = _Spy()
+    ok = await _call(TokenGuard(spy, TOKENS), "/mcp",
+                     [(b"authorization", b"Bearer mcpat_good")])
+    assert ok[0]["status"] == 200
+    assert seen["token"] == "mcpat_good"
+
+    spy2 = _Spy()
+    denied = await _call(TokenGuard(spy2, TOKENS), "/mcp",
+                         [(b"authorization", b"Bearer mcpat_bad")])
+    assert denied[0]["status"] == 401
+    assert not spy2.calls

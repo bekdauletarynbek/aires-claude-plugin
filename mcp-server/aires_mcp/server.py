@@ -12,7 +12,7 @@ SDK is imported at call time so the package can be exercised without it.
 
 Nothing here spends the project's LLM budget: the one expensive artefact, the
 PRD, is written by the caller's own model. ``prd_brief`` hands out the locked
-prompts and ``save_prd`` takes the finished document back — the server-side
+prompts; writing the finished document back is deliberately absent — the
 Opus pass (~$1.19 per document, 86.5% of all spend) was deleted, not gated.
 """
 
@@ -29,7 +29,6 @@ from aires_mcp.format import (
     format_coverage,
     format_ideas,
     format_prd_brief,
-    format_prd_saved,
     format_search_hits,
     format_text_page,
 )
@@ -94,9 +93,8 @@ def build_server() -> Any:
             "`company`, про конкретную тему — в `topic`.\n\n"
             "PRD: когда просят PRD по статье — НАПИШИТЕ его сами. "
             "`prd_brief(article_id)` вернёт системный промпт и материалы; "
-            "следуйте им дословно, затем сохраните результат через "
-            "`save_prd`. Серверной генерации не существует — документ "
-            "пишет только ваша модель."
+            "следуйте им дословно и отдайте документ человеку. Записи в "
+            "корпус у инструментов нет — они только читают."
         ),
     )
 
@@ -209,18 +207,10 @@ def build_server() -> Any:
         Возвращает системный промпт (контракт документа) и пользовательский
         промпт с полями статьи — те же залоченные шаблоны, что у серверного
         пути. Напишите PRD, строго следуя системному промпту (от `# PRD: …`
-        до версии в подвале), и сохраните его `save_prd(article_id, ...)`.
+        до версии в подвале), и отдайте документ человеку — сохранить его
+        в корпус можно из кабинета.
         """
         return await _call(lambda c: _prd_brief(c, article_id))
-
-    @mcp.tool()
-    async def save_prd(article_id: int, prd_markdown: str) -> str:
-        """Сохранить написанный вами PRD; сервер сам достроит презентацию.
-
-        Передавайте документ целиком (Markdown, от `# PRD:` до подвала).
-        Повторный вызов перезаписывает документ — это нормально для правок.
-        """
-        return await _call(lambda c: _save_prd(c, article_id, prd_markdown))
 
     @mcp.tool()
     async def get_deck_link(article_id: int) -> str:
@@ -345,11 +335,6 @@ async def _prd_brief(client: AiresClient, article_id: int) -> str:
     return format_prd_brief(brief)
 
 
-async def _save_prd(client: AiresClient, article_id: int, prd_markdown: str) -> str:
-    result = await client.submit_prd(article_id, prd_markdown)
-    return format_prd_saved(result, article_id=article_id)
-
-
 async def _deck(client: AiresClient, article_id: int) -> str:
     article = await client.get_article(article_id)
     stages = article.get("stages") or {}
@@ -357,7 +342,7 @@ async def _deck(client: AiresClient, article_id: int) -> str:
         return (
             f"Для статьи #{article_id} плана презентации ещё нет. "
             f"Сначала PRD: `prd_brief({article_id})` → напишите документ → "
-            f"`save_prd({article_id}, ...)`; план презентации сервер соберёт сам."
+            "загрузите его в кабинете корпуса; план презентации сервер соберёт сам."
         )
     return (
         f"Презентация по статье #{article_id}: {client.deck_url(article_id)}\n"

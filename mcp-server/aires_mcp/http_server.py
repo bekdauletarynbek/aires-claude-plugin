@@ -30,12 +30,50 @@
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Any
 
 from aires_mcp.server import build_server
 
 _TOKEN_PREFIX = "/t/"
+#: Префикс токенов, выданных нашим сервером авторизации через Google.
+_OAUTH_PREFIX = "mcpat_"
+
+
+def _auth_server() -> str:
+    return os.environ.get(
+        "AIRES_MCP_AUTH_SERVER", "https://secrets.ai-marketing.cloud"
+    ).rstrip("/")
+
+
+def _resource_url() -> str:
+    hosts = [h.strip() for h in os.environ.get("AIRES_MCP_HOSTS", "").split(",") if h.strip()]
+    return f"https://{hosts[0]}" if hosts else "https://mcp-api.ai-marketing.cloud"
+
+
+def _introspect(token: str) -> bool:
+    """Спросить у сервера авторизации, живой ли токен.
+
+    Синхронно и коротким таймаутом: это в горячем пути каждого запроса, а
+    зависший вызов выглядел бы как зависший MCP.
+    """
+    import httpx
+
+    service_token = os.environ.get("AIRES_MCP_INTROSPECT_TOKEN", "")
+    if not service_token:
+        return False
+    try:
+        response = httpx.post(
+            f"{_auth_server()}/oauth/introspect",
+            data={"token": token, "service_token": service_token},
+            timeout=5.0,
+        )
+    except httpx.HTTPError:
+        return False
+    if response.status_code != 200:
+        return False
+    return bool(response.json().get("active"))
 
 
 class TokenGuardError(RuntimeError):
@@ -81,7 +119,13 @@ def _unauthorized(message: str) -> dict[str, Any]:
             (b"content-type", b"application/json"),
             (b"content-length", str(len(body)).encode()),
             # Подсказка клиенту, каким способом авторизоваться.
-            (b"www-authenticate", b'Bearer realm="aires"'),
+            (
+                b"www-authenticate",
+                (
+                    'Bearer realm="aires", resource_metadata='
+                    f'"{_resource_url()}/.well-known/oauth-protected-resource"'
+                ).encode(),
+            ),
         ],
         "body": body,
     }
@@ -112,6 +156,23 @@ class TokenGuard:
             await self._plain(send, 200, b"ok")
             return
 
+        # По этому документу клиент Claude узнаёт, где авторизоваться.
+        if path == "/.well-known/oauth-protected-resource":
+            body = json.dumps(
+                {
+                    "resource": _resource_url(),
+                    "authorization_servers": [_auth_server()],
+                    "bearer_methods_supported": ["header"],
+                },
+                ensure_ascii=False,
+            ).encode("utf-8")
+            await self._plain(
+                send, 200, body,
+                [(b"content-type", b"application/json"),
+                 (b"content-length", str(len(body)).encode())],
+            )
+            return
+
         headers = {k.decode().lower(): v.decode() for k, v in scope.get("headers", [])}
         token = None
 
@@ -132,6 +193,9 @@ class TokenGuard:
                 scope["raw_path"] = scope["path"].encode()
 
         name = self._tokens.get(token or "")
+        if name is None and token and token.startswith(_OAUTH_PREFIX):
+            # Токен от гуглового входа: личность подтверждает сервер авторизации.
+            name = "oauth" if _introspect(token) else None
         if name is None:
             resp = _unauthorized("unauthorized: valid AIRES token required")
             await self._plain(send, resp["status"], resp["body"], resp["headers"])
