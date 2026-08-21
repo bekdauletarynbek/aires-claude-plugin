@@ -11,6 +11,8 @@ result that omits it is a dead end.
 
 from __future__ import annotations
 
+import pytest
+
 from aires_mcp.format import (
     format_article,
     format_companies,
@@ -319,8 +321,10 @@ def test_summary_without_ipr_does_not_invent_a_section() -> None:
 def test_ideas_point_to_the_other_angles() -> None:
     """Кросс-компанийный слой (#265, MLOps-аудит) нашли руками в analysis.
 
-    Выдача идей обязана говорить, что у статьи есть ещё углы, и куда за ними
-    идти — иначе правило «одна статья — одна идея» прячет находки.
+    Выдача идей обязана говорить, что статья полезна и другим компаниям, и
+    куда за этим идти — иначе правило «одна статья — одна идея» прячет
+    находки. Формулировка — без жаргона «углы»: модель копирует эти строки
+    человеку дословно.
     """
     from aires_mcp.format import format_ideas
 
@@ -342,7 +346,8 @@ def test_ideas_point_to_the_other_angles() -> None:
         total=1,
     )
 
-    assert "ещё 2 угол" in out
+    assert "есть применения ещё для 2 компаний" in out
+    assert "угол" not in out
     assert "get_article(265, section='analysis')" in out
 
 
@@ -367,11 +372,62 @@ def test_ideas_stay_quiet_when_there_are_no_other_angles() -> None:
         total=1,
     )
 
-    assert "угол" not in out.split("Это сырьё")[0]
+    assert "есть применения ещё" not in out
+
+
+@pytest.mark.parametrize(
+    ("count", "expected"),
+    [
+        (1, "для 1 компании"),
+        (2, "для 2 компаний"),
+        (5, "для 5 компаний"),
+        # 11 и 111 — ровно та ловушка, ради которой в правиле стоит
+        # `% 100 != 11`: без неё выходит «для 11 компании».
+        (11, "для 11 компаний"),
+        (21, "для 21 компании"),
+        (111, "для 111 компаний"),
+    ],
+)
+def test_ideas_declension_of_the_other_companies_counter(
+    count: int, expected: str
+) -> None:
+    """«для 1 компаний» — та ошибка согласования, о которую спотыкается глаз."""
+    from aires_mcp.format import format_ideas
+
+    out = format_ideas(
+        [
+            {
+                "article_id": 7,
+                "title": "t",
+                "company": "Arbuz.kz",
+                "relevance": 8,
+                "reasoning": "",
+                "opportunities": ["идея"],
+                "threats": [],
+                "other_angles": count,
+            }
+        ],
+        topic=None,
+        company=None,
+        total=1,
+    )
+
+    assert f"есть применения ещё {expected}" in out
+
+
+def test_ideas_footer_marks_scores_as_internal() -> None:
+    """Наблюдение с живой сессии: модель копировала «релевантность 9/10»
+    в ответ человеку. Оценка нужна модели для отбора, но она — служебная."""
+    from aires_mcp.format import format_ideas
+
+    out = format_ideas([_seed()], topic=None, company=None)
+
+    assert "служебные" in out
+    assert "не копируйте" in out
 
 
 def test_coverage_reads_as_a_map_with_a_conclusion() -> None:
-    """Таблица без вывода — просто цифры; вывод «дыра в корпусе, а не в
+    """Таблица без вывода — просто цифры; вывод «дыра в базе данных, а не в
     поиске» и есть причина существования инструмента."""
     from aires_mcp.format import format_coverage
 
@@ -390,7 +446,7 @@ def test_coverage_reads_as_a_map_with_a_conclusion() -> None:
 
     assert "266" in out and "256" in out
     assert "| Freedom Travel | 23 | 14 | 2 |" in out
-    assert "дыра в корпусе" in out
+    assert "дыра в базе данных" in out
 
 
 # ── MCP v2, заход 2: глубина чтения и экономия кругов ──────────────────────

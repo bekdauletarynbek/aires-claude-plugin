@@ -65,8 +65,8 @@ class _FakeClient:
     ) -> Any:
         return self._record("company_articles", company, min_relevance, limit)
 
-    async def prd_brief(self, article_id: int) -> Any:
-        return self._record("prd_brief", article_id)
+    async def prd_brief(self, article_id: int, stack: str = "") -> Any:
+        return self._record("prd_brief", article_id, stack)
 
     async def submit_prd(self, article_id: int, prd_markdown: str) -> Any:
         return self._record("submit_prd", article_id, prd_markdown)
@@ -210,7 +210,7 @@ def test_no_tool_spends_the_project_budget() -> None:
     tools = asyncio.run(server.build_server().list_tools())
     names = {t.name for t in tools}
     assert "generate_prd" not in names
-    # save_prd убран намеренно: у инструментов не должно быть записи в корпус.
+    # save_prd убран намеренно: у инструментов не должно быть записи в базу данных.
     assert "save_prd" not in names
     assert "prd_brief" in names
 
@@ -228,6 +228,28 @@ async def test_ideas_tool_passes_blank_filters_as_none(fake) -> None:  # type: i
     assert client.calls == [("ideas", (None, None, 6))]
 
 
+async def test_prd_brief_forwards_the_requested_stack(fake) -> None:  # type: ignore[no-untyped-def]
+    """Стэк, названный человеком, должен доехать до API.
+
+    Потерять его — самый тихий вид поломки: PRD всё равно сгенерируется,
+    просто под пометкой «стэк не задан».
+
+    Вызов идёт ЧЕРЕЗ зарегистрированный инструмент, а не через приватный
+    ``_prd_brief``: обёртка — ровно то место, где аргумент теряется, и
+    проверка помощника напрямую такую потерю не замечает (проверено
+    мутацией).
+    """
+    pytest.importorskip("mcp", reason="MCP SDK is an optional extra")
+
+    client = fake(prd_brief={"system": "s", "user": "u", "already_has_prd": False})
+
+    await server.build_server().call_tool(
+        "prd_brief", {"article_id": 214, "stack": "React + TypeScript"}
+    )
+
+    assert client.calls == [("prd_brief", (214, "React + TypeScript"))]
+
+
 def test_the_server_tells_the_client_when_to_reach_for_ideas() -> None:
     """The open question matches no tool name. Without instructions the model
     answers from its own knowledge and the corpus goes unused — which is the
@@ -238,6 +260,22 @@ def test_the_server_tells_the_client_when_to_reach_for_ideas() -> None:
 
     assert "suggest_ideas" in instructions
     assert "что можно сделать" in instructions.lower()
+
+
+def test_instructions_set_the_answer_style() -> None:
+    """Фидбэк с живой сессии: в ответ человеку просачивалась внутренняя
+    кухня — «корпус», названия артефактов (IPR, PRD, план презентации),
+    оценки «9/10», заголовок «Ключевые цифры». Итоговый текст пишет модель
+    клиента, поэтому единственный рычаг стиля — инструкции сервера."""
+    pytest.importorskip("mcp", reason="MCP SDK is an optional extra")
+
+    instructions = server.build_server().instructions or ""
+    low = instructions.lower()
+
+    assert "«корпус» не используйте" in instructions
+    assert "база данных" in low
+    assert "ipr" in low
+    assert "ключевые тезисы" in low
 
 
 def test_ideas_tool_advertises_the_open_question() -> None:
@@ -323,7 +361,7 @@ async def test_prd_brief_warns_about_existing_prd(fake) -> None:  # type: ignore
 
 
 async def test_deck_brief_uses_the_stored_plan(fake) -> None:  # type: ignore[no-untyped-def]
-    """План из корпуса должен доехать до модели дословно."""
+    """План из базы данных должен доехать до модели дословно."""
     client = fake(get_article={
         "id": 7, "title": "Про распознавание речи",
         "artifacts": {"presentation_text": "Слайд 1: постановка задачи",
@@ -350,7 +388,7 @@ async def test_deck_brief_works_without_a_plan(fake) -> None:  # type: ignore[no
 
 
 async def test_deck_brief_forbids_inventing_numbers(fake) -> None:  # type: ignore[no-untyped-def]
-    """Цифры в колоде — только из корпуса: выдуманные хуже отсутствующих."""
+    """Цифры в колоде — только из базы данных: выдуманные хуже отсутствующих."""
     client = fake(get_article={"id": 9, "artifacts": {"summary": "текст"}})
 
     out = await server._deck_brief(client, 9)  # type: ignore[arg-type]

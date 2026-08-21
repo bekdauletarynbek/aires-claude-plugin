@@ -13,7 +13,7 @@ build-backend = "hatchling.build"
 [project]
 name = "aires-mcp"
 version = "0.1.0"
-description = "MCP-сервер над корпусом исследований AIres — поиск, анализ и презентации в Claude Code"
+description = "MCP-сервер над базой данных исследований AIres — поиск, анализ и презентации в Claude Code"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Proprietary" }

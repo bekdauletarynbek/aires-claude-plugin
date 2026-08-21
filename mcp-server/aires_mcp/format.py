@@ -68,7 +68,7 @@ def format_search_hits(
 ) -> str:
     if not hits:
         return (
-            f'По запросу «{query}» в корпусе ничего не найдено. '
+            f'По запросу «{query}» в базе данных ничего не найдено. '
             "Попробуйте переформулировать или искать по-английски — "
             "статьи в основном англоязычные."
         )
@@ -257,12 +257,12 @@ def _missing_prd_note(article_id: Any, stages: dict[str, Any]) -> str:
     if stages.get("vibe_prd"):
         return (
             "PRD отмечен как готовый, но текста нет — вероятно, сбой выгрузки. "
-            "Перезаписать документ можно из кабинета корпуса."
+            "Перезаписать документ можно из кабинета базы данных."
         )
     return (
         "PRD ещё не писали: документ создаёте ВЫ, а не сервер. "
         f"`prd_brief({article_id})` вернёт промпт и материалы; готовый текст "
-        "загружают в корпус из кабинета — у инструментов доступа на запись нет."
+        "загружают в базу данных из кабинета — у инструментов доступа на запись нет."
     )
 
 
@@ -277,7 +277,7 @@ def format_companies(companies: list[dict[str, Any]]) -> str:
         key=lambda c: (c.get("high_relevance") or 0, c.get("articles") or 0),
         reverse=True,
     )
-    lines = ["Компании в корпусе (по числу сильных совпадений):", ""]
+    lines = ["Компании в базе данных (по числу сильных совпадений):", ""]
     for company in ordered:
         name = company.get("name", "?")
         line = f"- **{name}**"
@@ -319,7 +319,7 @@ def format_ideas(
 
     if not seeds:
         return (
-            f"В корпусе нет разобранных статей{scope}. "
+            f"В базе данных нет разобранных статей{scope}. "
             "Попробуйте другую формулировку, снимите фильтр по компании или "
             "посмотрите `list_companies()` — возможно, анализ ещё идёт."
         )
@@ -346,11 +346,13 @@ def format_ideas(
         )
         # Правило «одна статья — одна идея» бережёт разнообразие выдачи, но
         # молча прячет кросс-компанийные находки (MLOps-аудит из #265 нашли
-        # руками именно в analysis). Счётчик делает срез честным.
+        # руками именно в analysis). Счётчик делает срез честным. Формулировка
+        # без жаргона «углы»: модель копирует эти строки человеку дословно.
         other = int(seed.get("other_angles") or 0)
         if other:
+            word = "компании" if other % 10 == 1 and other % 100 != 11 else "компаний"
             source += (
-                f" · ещё {other} угол(а) у других компаний — "
+                f" · есть применения ещё для {other} {word} — "
                 f"get_article({seed.get('article_id')}, section='analysis')"
             )
         for opportunity in seed.get("opportunities") or []:
@@ -372,7 +374,8 @@ def format_ideas(
         "Это сырьё, а не ответ. Выберите 3–5 самых сильных под задачу "
         "собеседника, соберите из них внятные предложения (что делаем, кому, "
         "за счёт чего выигрываем, чем рискуем) и обязательно сошлитесь на "
-        "номера статей. За подробностями — `get_article(id, section='analysis')`; "
+        "номера статей; сами оценки «9/10» — служебные, в ответ человеку их "
+        "не копируйте. За подробностями — `get_article(id, section='analysis')`; "
         "если идею берут в работу — `prd_brief(id)`, и ТЗ пишете вы."
     )
     if total is not None and total > len(seeds):
@@ -395,7 +398,7 @@ def format_prd_brief(brief: dict[str, Any]) -> str:
     parts = [
         f"# Бриф PRD для статьи #{article_id}",
         "Напишите PRD сами, строго следуя системному промпту ниже, затем "
-        "отдайте документ человеку — загрузить его в корпус можно из кабинета.",
+        "отдайте документ человеку — загрузить его в базу данных можно из кабинета.",
     ]
     if brief.get("already_has_prd"):
         parts.append(
@@ -420,14 +423,14 @@ def format_prd_saved(result: dict[str, Any], *, article_id: int) -> str:
 
 
 def format_coverage(data: dict[str, Any]) -> str:
-    """Карта корпуса: где густо, где пусто.
+    """Карта базы данных: где густо, где пусто.
 
     Существует, чтобы слепые зоны были видны ДО работы: аналитик по travel
     сначала поставил поиску 4/10 и лишь потом узнал, что travel-статей в
-    корпусе почти нет.
+    базе данных почти нет.
     """
     lines = [
-        f"**Корпус: {data.get('total_articles', 0)} статей, "
+        f"**База данных: {data.get('total_articles', 0)} статей, "
         f"разобрано аналитикой {data.get('analysed', 0)}.**"
     ]
     sources = data.get("by_text_source") or {}
@@ -446,7 +449,7 @@ def format_coverage(data: dict[str, Any]) -> str:
         )
     lines.append("")
     lines.append(
-        "Мало статей у нужной компании — значит, дыра в корпусе, а не в "
+        "Мало статей у нужной компании — значит, дыра в базе данных, а не в "
         "поиске: сначала расширяются RSS-ленты и ключевые слова "
         "(`/config/feeds`), и только потом имеет смысл судить о качестве "
         "`search_articles`."
@@ -497,16 +500,16 @@ def format_company_brief(
         (c for c in coverage.get("companies") or [] if c.get("company") == company),
         None,
     )
-    lines = [f"# {company} — бриф по корпусу", ""]
+    lines = [f"# {company} — бриф по базе данных", ""]
     if row:
         lines.append(
             f"Статей: {row.get('articles')} "
             f"(релевантность ≥6: {row.get('ge6')}, ≥8: {row.get('ge8')}) "
-            f"из {coverage.get('total_articles')} в корпусе."
+            f"из {coverage.get('total_articles')} в базе данных."
         )
     else:
         lines.append(
-            f"В корпусе нет статей, размеченных на «{company}». "
+            f"В базе данных нет статей, размеченных на «{company}». "
             "Проверьте имя через `list_companies()`."
         )
     lines.append("")

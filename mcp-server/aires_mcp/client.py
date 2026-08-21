@@ -141,7 +141,7 @@ class AiresClient:
         )
 
     async def corpus_coverage(self) -> dict[str, Any]:
-        """Сводка покрытия корпуса — по компаниям, ярусам и датам."""
+        """Сводка покрытия базы данных — по компаниям, ярусам и датам."""
         return await self._request("GET", "/corpus/coverage")
 
     async def search(
@@ -201,10 +201,21 @@ class AiresClient:
         data = await self._request("GET", "/articles", params=params)
         return list(data.get("items", []))
 
-    async def prd_brief(self, article_id: int) -> dict[str, Any]:
-        """Промпты + материалы статьи для клиентской генерации PRD."""
+    async def prd_brief(
+        self, article_id: int, stack: str = ""
+    ) -> dict[str, Any]:
+        """Промпты + материалы статьи для клиентской генерации PRD.
+
+        ``stack`` уезжает в запрос только когда задан: пустой параметр
+        оставил бы серверу пустую строку вместо его собственного дефолта.
+        """
+        params: dict[str, Any] = {}
+        if stack.strip():
+            params["stack"] = stack.strip()
         return dict(
-            await self._request("GET", f"/articles/{article_id}/prd/brief")
+            await self._request(
+                "GET", f"/articles/{article_id}/prd/brief", params=params
+            )
         )
 
     async def submit_prd(
